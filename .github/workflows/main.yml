@@ -73,9 +73,9 @@ jobs:
         # Convert the combined geosite.json into geosite.dat
         ./json2geosite ../geosite/combined_geosite.json ../geosite.dat
 
-    # Step 6: Upload the generated .dat files as artifacts using @actions/artifact
+    # Step 6: Upload the generated .dat files as artifacts
     - name: Upload geoip.dat and geosite.dat
-      uses: actions/upload-artifact@v2  # Updated to v2 of @actions/artifact
+      uses: actions/artifact@v3  # 使用 @actions/artifact 包
       with:
         name: geoip-geosite-dat
         path: |
