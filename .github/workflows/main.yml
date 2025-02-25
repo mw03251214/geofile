@@ -1,0 +1,82 @@
+name: Build GeoIP and GeoSite Dat Files
+
+on:
+  push:
+    paths:
+      - 'geoip/*.txt'
+      - 'geosite/*.txt'
+  pull_request:
+    paths:
+      - 'geoip/*.txt'
+      - 'geosite/*.txt'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    # Step 1: Checkout repository
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # Step 2: Set up Go (required for V2Ray's tools)
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.18'
+
+    # Step 3: Install dependencies (e.g., V2Ray and mosdns tools)
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential git
+        git clone https://github.com/v2ray/v2ray-core.git
+        cd v2ray-core
+        make
+
+    # Step 4: Convert all GeoIP txt files to geoip.dat
+    - name: Convert all GeoIP txt files to geoip.dat
+      run: |
+        cd v2ray-core
+        # Loop through each txt file in geoip directory
+        for file in ../geoip/*.txt; do
+          # Extract filename without extension
+          filename=$(basename "$file" .txt)
+          
+          # Convert each geoip txt file to json
+          ./geoip2json "$file" "../geoip/$filename.json"
+          
+          # Append to a combined geoip.json file (if needed)
+          cat "../geoip/$filename.json" >> ../geoip/combined_geoip.json
+        done
+
+        # Convert the combined geoip.json into geoip.dat
+        ./json2geoip ../geoip/combined_geoip.json ../geoip.dat
+
+    # Step 5: Convert all Geosite txt files to geosite.dat
+    - name: Convert all Geosite txt files to geosite.dat
+      run: |
+        cd v2ray-core
+        # Loop through each txt file in geosite directory
+        for file in ../geosite/*.txt; do
+          # Extract filename without extension
+          filename=$(basename "$file" .txt)
+          
+          # Convert each geosite txt file to json
+          ./geosite2json "$file" "../geosite/$filename.json"
+          
+          # Append to a combined geosite.json file (if needed)
+          cat "../geosite/$filename.json" >> ../geosite/combined_geosite.json
+        done
+
+        # Convert the combined geosite.json into geosite.dat
+        ./json2geosite ../geosite/combined_geosite.json ../geosite.dat
+
+    # Step 6: Upload the generated .dat files as artifacts
+    - name: Upload geoip.dat and geosite.dat
+      uses: actions/upload-artifact@v3
+      with:
+        name: geoip-geosite-dat
+        path: |
+          geoip.dat
+          geosite.dat
